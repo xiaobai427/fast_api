@@ -1,94 +1,117 @@
-# # from pymongo import MongoClient
-# # from datetime import datetime
-# # from bson.objectid import ObjectId  # 导入ObjectId
-# #
-# #
-# # def update_roles():
-# #     # 连接到MongoDB
-# #     client = MongoClient('localhost', 27017)
-# #     db = client['wbsite']  # 更改为您的数据库名称
-# #     roles_collection = db['roles']  # 假设集合名称为roles
-# #
-# #     # 获取所有文档
-# #     roles = roles_collection.find()
-# #
-# #     for index, role in enumerate(roles):
-# #         # 解析字符串格式的时间
-# #         # create_time = datetime.strptime(role['create_time'], "%Y-%m-%d %H:%M:%S")
-# #         # update_time = datetime.strptime(role['update_time'], "%Y-%m-%d %H:%M:%S")
-# #
-# #         # 将is_deleted从int转换为bool（这里的原代码已经是bool类型了，所以这一步可能是个误会或不需要的）
-# #         is_deleted = role['is_deleted']
-# #
-# #         print(index)
-# #         # 更新文档
-# #         roles_collection.update_one(
-# #             {'_id': role['_id']},
-# #             {'$set': {
-# #                 'id': int(index),  # 更新id为新的ObjectId
-# #                 # 'create_time': create_time,
-# #                 # 'update_time': update_time,
-# #                 'is_deleted': is_deleted
-# #             }}
-# #         )
-# #
-# #
-# # if __name__ == "__main__":
-# #     update_roles()
-# import asyncio
+from pymongo import MongoClient
+
+
+def update_roles():
+    # 连接到MongoDB
+    client = MongoClient('localhost', 27017)
+    db = client['test_data']  # 更改为您的数据库名称
+
+    # 自动获取所有集合
+    collections = db.list_collection_names()
+    for collection_name in collections:
+        print(f"Updating collection: {collection_name}")
+        collection = db[collection_name]
+        roles = collection.find()
+
+        for index, role in enumerate(roles):
+            # 更新文档的 'id' 字段
+            collection.update_one(
+                {'_id': role['_id']},
+                {'$set': {'id': index}}  # 将 'id' 设置为索引值
+            )
+
+
+if __name__ == "__main__":
+    update_roles()
+
+# from pymongo import MongoClient
+# from datetime import datetime
+# from bson.objectid import ObjectId  # 导入ObjectId
 #
-# # from mongoengine import connect, disconnect
-# # from pymongo import MongoClient
-# # import mysql.connector
+#
 # #
 # #
-# # # MongoDB操作：列出数据库、集合、第一个文档的字段及其类型
-# # def mongo_operations():
-# #     print("MongoDB操作:")
-# #     connect(host='mongodb://localhost:27017/')
-# #     client = MongoClient('localhost', 27017)
-# #     db_names = client.list_database_names()
-# #     for db_name in db_names:
-# #         print(f"\n数据库: {db_name}")
-# #         db = client[db_name]
-# #         collection_names = db.list_collection_names()
-# #         for collection_name in collection_names:
-# #             print(f"  集合: {collection_name}")
-# #             collection = db[collection_name]
-# #             document = collection.find_one()
-# #             if document:
-# #                 print("    字段、值和类型:")
-# #                 for key, value in document.items():
-# #                     value_type = type(value).__name__  # 获取值的类型名称
-# #                     print(f"      {key}: {value} ({value_type})")
-# #             else:
-# #                 print("    集合是空的")
-# #     disconnect()
-# #
-# #
-# # # MySQL操作：列出数据库表、列及其属性
-# # def mysql_operations():
-# #     print("\nMySQL操作:")
-# #     cnx = mysql.connector.connect(user='root', password='123456',
-# #                                   host='127.0.0.1',
-# #                                   database='test_data')
-# #     cursor = cnx.cursor()
-# #     cursor.execute("SHOW TABLES;")
-# #     tables = cursor.fetchall()
-# #     for (table_name,) in tables:
-# #         print(f"\n表: {table_name}")
-# #         cursor.execute(f"DESCRIBE {table_name};")
-# #         columns = cursor.fetchall()
-# #         print("  列和属性:")
-# #         for column in columns:
-# #             print(
-# #                 f"    列名: {column[0]}, 类型: {column[1]}, Null允许: {column[2]}, 键: {column[3]}, 默认值: {column[4]}, 额外信息: {column[5]}")
-# #     cursor.close()
-# #     cnx.close()
-# #
-# #
-# # if __name__ == "__main__":
-# #     mongo_operations()
+# def update_roles():
+#     # 连接到MongoDB
+#     client = MongoClient('localhost', 27017)
+#     db = client['wbsite']  # 更改为您的数据库名称
+#
+#     # 获取所有文档
+#     roles = roles_collection.find()
+#
+#     for index, role in enumerate(roles):
+#         # 解析字符串格式的时间
+#         # create_time = datetime.strptime(role['create_time'], "%Y-%m-%d %H:%M:%S")
+#         # update_time = datetime.strptime(role['update_time'], "%Y-%m-%d %H:%M:%S")
+#
+#         # 将is_deleted从int转换为bool（这里的原代码已经是bool类型了，所以这一步可能是个误会或不需要的）
+#         is_deleted = role['is_deleted']
+#
+#         # 更新文档
+#         roles_collection.update_one(
+#             {'_id': role['_id']},
+#             {'$set': {
+#                 'id': int(index),  # 更新id为新的ObjectId
+#             }}
+#         )
+#
+#
+# if __name__ == "__main__":
+#     update_roles()
+import asyncio
+
+# from mongoengine import connect, disconnect
+# from pymongo import MongoClient
+# import mysql.connector
+#
+#
+# # MongoDB操作：列出数据库、集合、第一个文档的字段及其类型
+# def mongo_operations():
+#     print("MongoDB操作:")
+#     connect(host='mongodb://localhost:27017/')
+#     client = MongoClient('localhost', 27017)
+#     db_names = client.list_database_names()
+#     for db_name in db_names:
+#         print(f"\n数据库: {db_name}")
+#         db = client[db_name]
+#         collection_names = db.list_collection_names()
+#         for collection_name in collection_names:
+#             print(f"  集合: {collection_name}")
+#             collection = db[collection_name]
+#             document = collection.find_one()
+#             if document:
+#                 print("    字段、值和类型:")
+#                 for key, value in document.items():
+#                     value_type = type(value).__name__  # 获取值的类型名称
+#                     print(f"      {key}: {value} ({value_type})")
+#             else:
+#                 print("    集合是空的")
+#     disconnect()
+#
+#
+# # MySQL操作：列出数据库表、列及其属性
+# def mysql_operations():
+#     print("\nMySQL操作:")
+#     cnx = mysql.connector.connect(user='root', password='123456',
+#                                   host='127.0.0.1',
+#                                   database='test_data')
+#     cursor = cnx.cursor()
+#     cursor.execute("SHOW TABLES;")
+#     tables = cursor.fetchall()
+#     for (table_name,) in tables:
+#         print(f"\n表: {table_name}")
+#         cursor.execute(f"DESCRIBE {table_name};")
+#         columns = cursor.fetchall()
+#         print("  列和属性:")
+#         for column in columns:
+#             print(
+#                 f"    列名: {column[0]}, 类型: {column[1]}, Null允许: {column[2]}, 键: {column[3]}, 默认值: {column[4]}, 额外信息: {column[5]}")
+#     cursor.close()
+#     cnx.close()
+#
+#
+# if __name__ == "__main__":
+#     mongo_operations()
 #
 #
 # from beanie import Document, init_beanie
@@ -276,3 +299,37 @@
 # #
 # if __name__ == "__main__":
 #     asyncio.run(run_tests())
+
+
+# import asyncio
+# from motor.motor_asyncio import AsyncIOMotorClient
+#
+#
+# async def copy_collection(source_db_name, target_db_name, collection_name):
+#     # 创建MongoDB异步客户端实例
+#     client = AsyncIOMotorClient("mongodb://localhost:27017")
+#
+#     # 获取源数据库和目标数据库的引用
+#     source_db = client[source_db_name]
+#     target_db = client[target_db_name]
+#
+#     # 获取集合的引用
+#     source_collection = source_db[collection_name]
+#     target_collection = target_db[collection_name]
+#
+#     # 读取源集合中的所有文档
+#     documents = await source_collection.find().to_list(length=None)
+#
+#     # 如果目标集合中有数据，先清空目标集合
+#     await target_collection.delete_many({})
+#
+#     # 如果源集合中有文档，复制到目标集合
+#     if documents:
+#         await target_collection.insert_many(documents)
+#
+#     print(
+#         f"Successfully copied {len(documents)} documents from {source_db_name}.{collection_name} to {target_db_name}.{collection_name}")
+#
+#
+# # 初始化和运行异步操作
+# asyncio.run(copy_collection("wbsite", "test_data", "roles"))

@@ -1,10 +1,11 @@
 # api/base.py
+import logging
 from typing import Union, Optional, TypeVar, Generic, Type
 
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from common.result import Result, ResultCode
-from log_manager import log_manager
+from log_manager import logger
 from services.role_batabase import RoleCreateRequest, RoleDatabaseOperationsBase
 
 
@@ -24,16 +25,17 @@ class RoleAPIHandler(Generic[T]):
             role = await self.db_ops_cls.create(role_request)
             return Result.success(role)
         except Exception as e:
-            log_manager.error(f"Error creating role: {e}")
+            logger.error(f"Error creating role: {e}")
             # 这里假设所有异常都是服务错误，你可能需要根据异常的类型来调整错误码
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))
 
     async def list_roles(self):
         try:
+            logger.debug("Listing roles...")
             roles = await self.db_ops_cls.get_all()
             return Result.success(roles)
         except Exception as e:
-            log_manager.error(f"Error listing roles: {e}")
+            logger.error(f"Error listing roles: {e}")
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))
 
     async def get_role(self, role_id: Union[int, str, PydanticObjectId]):
@@ -43,7 +45,7 @@ class RoleAPIHandler(Generic[T]):
                 return Result.fail(f"Role with ID {role_id} not found")
             return Result.success(role)
         except Exception as e:
-            log_manager.error(f"Error getting role: {e}")
+            logger.error(f"Error getting role: {e}")
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))
 
     async def search_roles(self, id_: Union[str, int], role_name: Optional[str], role_code: Optional[str]):
@@ -51,7 +53,7 @@ class RoleAPIHandler(Generic[T]):
             roles = await self.db_ops_cls.search(id_, role_name, role_code)
             return Result.success(roles)
         except Exception as e:
-            log_manager.error(f"Error searching roles: {e}")
+            logger.error(f"Error searching roles: {e}")
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))
 
     async def update_role(self, role_id: Union[str, int], role_request: RoleCreateRequest):
@@ -61,7 +63,7 @@ class RoleAPIHandler(Generic[T]):
                 return Result.fail(f"Role with ID {role_id} not found")
             return Result.success(updated_role)
         except Exception as e:
-            log_manager.error(f"Error updating role: {e}")
+            logger.error(f"Error updating role: {e}")
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))
 
     async def delete_role(self, role_id: Union[str, int]):
@@ -71,5 +73,5 @@ class RoleAPIHandler(Generic[T]):
                 return Result.fail(f"Role with ID {role_id} not found")
             return Result.success(deleted_role)
         except Exception as e:
-            log_manager.error(f"Error deleting role: {e}")
+            logger.error(f"Error deleting role: {e}")
             return HTTPException(ResultCode.SERVICE_ERROR.value, str(e))

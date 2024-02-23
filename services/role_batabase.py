@@ -58,8 +58,6 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
         return RoleResponse(**role.dict())
 
     async def get_all(self) -> List[RoleResponse]:
-        print(self.model)
-
         roles = await self.model.find_all().to_list()
         return [RoleResponse(**role.dict()) for role in roles]
 

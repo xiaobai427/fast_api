@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
 from api.roles_api import RoleAPI
-from log_manager import log_manager
+from log_manager import log_manager, logger
 # 假设的模型和服务导入
 from models import RoleTest, Spur, AntCalibCrossFreq, Calibration, Eirp, Pattern, RoleWbsite
 from api.base import router as role_router, RoleAPIHandler
@@ -29,12 +29,12 @@ app.include_router(role_api_wbsite.get_router(), prefix="/wbsite")
 @app.on_event("startup")
 async def app_init():
     global client_test_data, client_wbsite
-    log_manager.debug("Initializing MongoDB client...")
+    logger.debug("Initializing MongoDB client...")
     # 创建MongoDB客户端实例
     client_test_data = AsyncIOMotorClient("mongodb://localhost:27017/test_data")
     client_wbsite = AsyncIOMotorClient("mongodb://localhost:27017/wbsite")
-    log_manager.debug("MongoDB client initialized.")
-    log_manager.debug("Initializing routes...")
+    logger.debug("MongoDB client initialized.")
+    logger.debug("Initializing routes...")
 
     # Beanie初始化
     await init_beanie(database=client_test_data.test_data,
@@ -44,11 +44,10 @@ async def app_init():
 
 @app.on_event("shutdown")
 async def app_shutdown():
-    log_manager.debug("Shutdown event occurred. Closing MongoDB connections.")
+    logger.debug("Shutdown event occurred. Closing MongoDB connections.")
     # 关闭MongoDB客户端连接
     client_test_data.close()
     client_wbsite.close()
-    log_manager.close()
 
 
 # 包含路由
