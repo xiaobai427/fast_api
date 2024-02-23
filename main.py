@@ -2,16 +2,28 @@ from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
+from api.roles_api import RoleAPI
 from log_manager import log_manager
 # 假设的模型和服务导入
 from models import RoleTest, Spur, AntCalibCrossFreq, Calibration, Eirp, Pattern, RoleWbsite
-from api.role_api import router as role_router
+from api.base import router as role_router, RoleAPIHandler
+from services.role_batabase import RoleTestDatabaseOperations, RoleWbsiteDatabaseOperations
 
 # 全局MongoDB客户端实例
-client_test_data: AsyncIOMotorClient = None
-client_wbsite: AsyncIOMotorClient = None
+client_test_data: AsyncIOMotorClient
+client_wbsite: AsyncIOMotorClient
 
 app = FastAPI()
+
+# 假设 RoleTestDatabaseOperations 和 RoleWbsiteDatabaseOperations 已定义
+role_api_handler_test = RoleAPIHandler[RoleTestDatabaseOperations](RoleTestDatabaseOperations)
+role_api_handler_wbsite = RoleAPIHandler[RoleWbsiteDatabaseOperations](RoleWbsiteDatabaseOperations)
+
+role_api_test = RoleAPI(role_api_handler_test)
+role_api_wbsite = RoleAPI(role_api_handler_wbsite)
+
+app.include_router(role_api_test.get_router(), prefix="/test")
+app.include_router(role_api_wbsite.get_router(), prefix="/wbsite")
 
 
 @app.on_event("startup")
@@ -32,7 +44,6 @@ async def app_init():
 
 @app.on_event("shutdown")
 async def app_shutdown():
-
     log_manager.debug("Shutdown event occurred. Closing MongoDB connections.")
     # 关闭MongoDB客户端连接
     client_test_data.close()

@@ -2,13 +2,13 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from typing import List, Optional, Union, Type, TypeVar, Generic
-from beanie import PydanticObjectId, Document
+from beanie import Document
 
 from models import RoleWbsite, RoleTest
 from services.base import BaseDatabaseOperations
 
 # 定义一个类型变量，用于泛型
-T = TypeVar("T", bound=Union[RoleWbsite, RoleTest])
+T = TypeVar('T', bound=Document)
 
 
 # 假设的Pydantic请求和响应模型
@@ -58,23 +58,30 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
         return RoleResponse(**role.dict())
 
     async def get_all(self) -> List[RoleResponse]:
+        print(self.model)
+
         roles = await self.model.find_all().to_list()
         return [RoleResponse(**role.dict()) for role in roles]
 
-    async def search(self, name: Optional[str] = None, code: Optional[str] = None) -> List[RoleResponse]:
-        query = {}
-        if name:
-            query["role_name"] = {"$regex": name, "$options": "i"}
-        if code:
-            query["role_code"] = {"$regex": code, "$options": "i"}
+    async def search(self,
+                     id_: Optional[str] = None,
+                     name: Optional[str] = None,
+                     code: Optional[str] = None) -> List[RoleResponse]:
+        # 构建查询条件，只包含非None的参数
+        query = {
+            **({"id": {"$regex": id_, "$options": "i"}} if id_ else {}),
+            **({"role_name": {"$regex": name, "$options": "i"}} if name else {}),
+            **({"role_code": {"$regex": code, "$options": "i"}} if code else {})
+        }
+
         roles = await self.model.find(query).to_list()
         return [RoleResponse(**role.dict()) for role in roles]
 
-    async def get_by_id(self, record_id: Union[int, str, PydanticObjectId]) -> RoleResponse:
+    async def get_by_id(self, record_id: Union[int, str]) -> RoleResponse:
         role = await self.model.get(record_id)
         return RoleResponse(**role.dict())
 
-    async def update(self, record_id: Union[PydanticObjectId, int, str],
+    async def update(self, record_id: Union[int, str],
                      update_data: RoleCreateRequest) -> RoleResponse:
         role = await self.model.get(record_id)
         role.role_name = update_data.role_name
@@ -83,7 +90,7 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
         await role.save()
         return RoleResponse(**role.dict())
 
-    async def delete(self, record_id: PydanticObjectId) -> None:
+    async def delete(self, record_id: Union[int, str]) -> None:
         role = await self.model.get(record_id)
         await role.delete()
 
