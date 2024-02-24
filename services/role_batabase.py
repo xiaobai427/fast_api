@@ -49,16 +49,14 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
     model: Type[T]  # 指定模型类型
 
     async def create(self, create_data: RoleCreateRequest) -> RoleResponse:
-        new_id = await get_next_sequence(self.model)  # Generate the next ID
-        role = self.model(id=new_id,
+        new_id = await get_next_sequence(RoleWbsite)  # Generate the next ID
+        role = RoleWbsite(
+                          id=new_id,
                           role_name=create_data.role_name,
                           role_code=create_data.role_code,
-                          description=create_data.description
-                          )
-        print(role.dict())
-        print("*" * 100)
-        # await role.create()
-        print(role.dict())
+                          description=create_data.description)
+        role_dict = role.dict()
+        await role.get_motor_collection().insert_one(role_dict)
         return RoleResponse(**role.dict())
 
     async def get_all(self) -> List[RoleResponse]:
