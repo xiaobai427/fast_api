@@ -1,28 +1,28 @@
-from pymongo import MongoClient
-
-
-def update_roles():
-    # 连接到MongoDB
-    client = MongoClient('localhost', 27017)
-    db = client['test_data']  # 更改为您的数据库名称
-
-    # 自动获取所有集合
-    collections = db.list_collection_names()
-    for collection_name in collections:
-        print(f"Updating collection: {collection_name}")
-        collection = db[collection_name]
-        roles = collection.find()
-
-        for index, role in enumerate(roles):
-            # 更新文档的 'id' 字段
-            collection.update_one(
-                {'_id': role['_id']},
-                {'$set': {'id': index}}  # 将 'id' 设置为索引值
-            )
-
-
-if __name__ == "__main__":
-    update_roles()
+# from pymongo import MongoClient
+#
+#
+# def update_roles():
+#     # 连接到MongoDB
+#     client = MongoClient('localhost', 27017)
+#     db = client['test_data']  # 更改为您的数据库名称
+#
+#     # 自动获取所有集合
+#     collections = db.list_collection_names()
+#     for collection_name in collections:
+#         print(f"Updating collection: {collection_name}")
+#         collection = db[collection_name]
+#         roles = collection.find()
+#
+#         for index, role in enumerate(roles):
+#             # 更新文档的 'id' 字段
+#             collection.update_one(
+#                 {'_id': role['_id']},
+#                 {'$set': {'id': index}}  # 将 'id' 设置为索引值
+#             )
+#
+#
+# if __name__ == "__main__":
+#     update_roles()
 
 # from pymongo import MongoClient
 # from datetime import datetime
@@ -175,131 +175,157 @@ import asyncio
 #     asyncio.run(main())
 #     # print(uuid.uuid4().hex)
 
-# from datetime import datetime
-# from pydantic import BaseModel, Field
-#
-# from typing import List, Optional, Union, Type
-# from beanie import PydanticObjectId, Document
-#
-# from log_manager import log_manager
-# from models import RoleWbsite
-# from services.base import BaseDatabaseOperations
-#
-#
-# # 假设的Pydantic请求和响应模型
-# class RoleCreateRequest(BaseModel):
-#     role_name: str
-#     role_code: str
-#     description: Optional[str] = None
-#
-#
-# class RoleResponse(BaseModel):
-#     id: int
-#     role_name: str
-#     role_code: str
-#     description: Optional[str]
-#     create_time: datetime
-#     update_time: datetime = Field(default_factory=datetime.now)
-#     is_deleted: bool
-#
-#
-# async def get_next_sequence(model: Type[Document]) -> int:
-#     # Use the model's class name as a unique identifier for the counter
-#     sequence_name = model.Settings.name
-#     # Access the database client from the model's associated collection
-#     db = model.get_motor_collection().database
-#     # Access the 'counters' collection from the same database
-#     counters_collection = db.get_collection('counters')
-#
-#     result = await counters_collection.find_one_and_update(
-#         {"_id": sequence_name},
-#         {"$inc": {"sequence_value": 1}},
-#         upsert=True,
-#         return_document=True
-#     )
-#     return result["sequence_value"]
-#
-#
-# class RoleDatabaseOperations(BaseDatabaseOperations[RoleCreateRequest, RoleResponse]):
-#     async def create(self, create_data: RoleCreateRequest) -> RoleResponse:
-#         new_id = await get_next_sequence(RoleWbsite)  # Generate the next ID
-#         role = RoleWbsite(id=new_id,
-#                           role_name=create_data.role_name,
-#                           role_code=create_data.role_code,
-#                           description=create_data.description)
-#         await role.create()
-#         return RoleResponse(**role.dict())
-#
-#     async def get_all(self) -> List[RoleResponse]:
-#         roles = await RoleWbsite.find_all().to_list()
-#
-#         for role in roles:
-#             log_manager.debug(f"Role: {role}")
-#
-#         return [RoleResponse(**role.dict()) for role in
-#                 roles]
-#
-#     async def search(self, name: Optional[str] = None, code: Optional[str] = None) -> List[RoleResponse]:
-#         query = {}
-#         if name:
-#             query["role_name"] = {"$regex": name, "$options": "i"}
-#         if code:
-#             query["role_code"] = {"$regex": code, "$options": "i"}
-#         roles = await RoleWbsite.find(query).to_list()
-#         return [RoleResponse(**role.dict()) for role in
-#                 roles]
-#
-#     async def get_by_id(self, record_id: Union[int, str, PydanticObjectId]) -> RoleResponse:
-#         role = await RoleWbsite.get(record_id)
-#         return RoleResponse(**role.dict())
-#
-#     async def update(self, record_id: Union[PydanticObjectId, int, str],
-#                      update_data: RoleCreateRequest) -> RoleResponse:
-#         role = await RoleWbsite.get(record_id)
-#         role.role_name = update_data.role_name
-#         role.role_code = update_data.role_code
-#         role.description = update_data.description
-#         await role.save()
-#         return RoleResponse(**role.dict())
-#
-#     async def delete(self, record_id: PydanticObjectId) -> None:
-#         role = await RoleWbsite.get(record_id)
-#         await role.delete()
-#
-#
-# import asyncio
-# from motor.motor_asyncio import AsyncIOMotorClient
-# from beanie import init_beanie
-#
-# from models import RoleWbsite, RoleTest
-# from services.role_batabase import RoleTestDatabaseOperations, RoleWbsiteDatabaseOperations
+from datetime import datetime
+from pydantic import BaseModel, Field
+
+from typing import List, Optional, Union, Type
+from beanie import PydanticObjectId, Document
+
+from log_manager import log_manager
+from models import RoleWbsite
+from services.base import BaseDatabaseOperations
+
+
+# 假设的Pydantic请求和响应模型
+class RoleCreateRequest(BaseModel):
+    role_name: str
+    role_code: str
+    description: Optional[str] = None
+
+
+class RoleResponse(BaseModel):
+    id: int
+    role_name: str
+    role_code: str
+    description: Optional[str]
+    create_time: datetime
+    update_time: datetime = Field(default_factory=datetime.now)
+    is_deleted: bool
+
+
+async def get_next_sequence(model: Type[Document]) -> int:
+    # Use the model's class name as a unique identifier for the counter
+    sequence_name = model.Settings.name
+    # Access the database client from the model's associated collection
+    db = model.get_motor_collection().database
+    # Access the 'counters' collection from the same database
+    counters_collection = db.get_collection('counters')
+
+    result = await counters_collection.find_one_and_update(
+        {"_id": sequence_name},
+        {"$inc": {"sequence_value": 1}},
+        upsert=True,
+        return_document=True
+    )
+    return result["sequence_value"]
+
+
+class RoleDatabaseOperations(BaseDatabaseOperations[RoleCreateRequest, RoleResponse]):
+    async def create(self, create_data: RoleCreateRequest) -> RoleResponse:
+        new_id = await get_next_sequence(RoleWbsite)  # Generate the next ID
+        role = RoleWbsite(
+                          id=new_id,
+                          role_name=create_data.role_name,
+                          role_code=create_data.role_code,
+                          description=create_data.description)
+        role_dict = role.dict()
+        await role.get_motor_collection().insert_one(role_dict)
+        return RoleResponse(**role.dict())
+
+    async def get_all(self) -> List[RoleResponse]:
+        roles = await RoleWbsite.find_all().to_list()
+
+        for role in roles:
+            log_manager.debug(f"Role: {role}")
+
+        return [RoleResponse(**role.dict()) for role in
+                roles]
+
+    async def search(self, name: Optional[str] = None, code: Optional[str] = None) -> List[RoleResponse]:
+        query = {}
+        if name:
+            query["role_name"] = {"$regex": name, "$options": "i"}
+        if code:
+            query["role_code"] = {"$regex": code, "$options": "i"}
+        roles = await RoleWbsite.find(query).to_list()
+        return [RoleResponse(**role.dict()) for role in
+                roles]
+
+    async def get_by_id(self, record_id: Union[int, str, PydanticObjectId]) -> RoleResponse:
+        role = await RoleWbsite.get(record_id)
+        return RoleResponse(**role.dict())
+
+    async def update(self, record_id: Union[PydanticObjectId, int, str],
+                     update_data: RoleCreateRequest) -> RoleResponse:
+        role = await RoleWbsite.get(record_id)
+        role.role_name = update_data.role_name
+        role.role_code = update_data.role_code
+        role.description = update_data.description
+        await role.save()
+        return RoleResponse(**role.dict())
+
+    async def delete(self, record_id: PydanticObjectId) -> None:
+        role = await RoleWbsite.get(record_id)
+        await role.delete()
+
+
 #
 #
-# async def init_db():
-#     # 连接到数据库
-#     client_test_data = AsyncIOMotorClient("mongodb://localhost:27017/test_data")
-#     client_wbsite = AsyncIOMotorClient("mongodb://localhost:27017/wbsite")
-#
-#     # 初始化Beanie，指定文档模型和数据库
-#     await init_beanie(database=client_test_data.get_database("test_data"), document_models=[RoleTest])
-#     await init_beanie(database=client_wbsite.get_database("wbsite"), document_models=[RoleWbsite])
-#
-#
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
+
+from models import RoleWbsite, RoleTest
+from services.role_batabase import RoleTestDatabaseOperations, RoleWbsiteDatabaseOperations
+
+
+async def init_db():
+    # 连接到数据库
+    client_test_data = AsyncIOMotorClient("mongodb://localhost:27017/test_data")
+    client_wbsite = AsyncIOMotorClient("mongodb://localhost:27017/wbsite")
+
+    # 初始化Beanie，指定文档模型和数据库
+    await init_beanie(database=client_test_data.get_database("test_data"), document_models=[RoleTest])
+    await init_beanie(database=client_wbsite.get_database("wbsite"), document_models=[RoleWbsite])
+
+
 # async def run_tests():
 #     await init_db()  # 确保先初始化数据库
 #
-#     role_wbsite_ops = RoleWbsiteDatabaseOperations()
+#     role_wbsite_ops = RoleDatabaseOperations()
 #
-#     print(role_wbsite_ops)
+# #     print(role_wbsite_ops)
+# # #
+# # #     # 获取所有角色
+# #     roles = await role_wbsite_ops.get_all()
 # #
-# #     # 获取所有角色
-#     roles = await role_wbsite_ops.get_all()
-#     print("Roles:", roles)
+# #     roles = await role_wbsite_ops.create()
+# #     print("Roles:", roles)
 # #
 # #
 # if __name__ == "__main__":
 #     asyncio.run(run_tests())
 
+async def run_tests():
+    await init_db()  # 确保先初始化数据库
+
+    # 创建 RoleDatabaseOperations 实例
+    role_wbsite_ops = RoleDatabaseOperations()
+
+    # 创建新角色的数据
+    new_role_data = RoleCreateRequest(
+        role_name="Example Role",
+        role_code="example_code",
+        description="This is an example role description."
+    )
+
+    # 创建新角色
+    new_role = await role_wbsite_ops.create(new_role_data)
+    print("New Role Created:", new_role)
+
+
+if __name__ == "__main__":
+    asyncio.run(run_tests())
 
 # import asyncio
 # from motor.motor_asyncio import AsyncIOMotorClient

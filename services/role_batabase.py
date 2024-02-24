@@ -23,9 +23,9 @@ class RoleResponse(BaseModel):
     role_name: str
     role_code: str
     description: Optional[str]
-    create_time: datetime
-    update_time: datetime = Field(default_factory=datetime.now)
-    is_deleted: bool
+    create_time: Union[datetime, str] = Field(default_factory=datetime.now)
+    update_time: Union[datetime, str] = Field(default_factory=datetime.now)
+    is_deleted: bool = Field(default=False)
 
 
 async def get_next_sequence(model: Type[Document]) -> int:
@@ -53,8 +53,12 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
         role = self.model(id=new_id,
                           role_name=create_data.role_name,
                           role_code=create_data.role_code,
-                          description=create_data.description)
-        await role.create()
+                          description=create_data.description
+                          )
+        print(role.dict())
+        print("*" * 100)
+        # await role.create()
+        print(role.dict())
         return RoleResponse(**role.dict())
 
     async def get_all(self) -> List[RoleResponse]:
@@ -71,7 +75,6 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
             **({"role_name": {"$regex": name, "$options": "i"}} if name else {}),
             **({"role_code": {"$regex": code, "$options": "i"}} if code else {})
         }
-
         roles = await self.model.find(query).to_list()
         return [RoleResponse(**role.dict()) for role in roles]
 
