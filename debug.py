@@ -176,15 +176,51 @@ import asyncio
 #     # print(uuid.uuid4().hex)
 
 from datetime import datetime
+
+from bson import ObjectId
+from gridfs import GridFS
 from pydantic import BaseModel, Field
 
 from typing import List, Optional, Union, Type
 from beanie import PydanticObjectId, Document
 
 from log_manager import log_manager
-from models import RoleWbsite
 from services.base import BaseDatabaseOperations
 
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase, AsyncIOMotorGridFSBucket
+from beanie import init_beanie
+
+
+class RoleBaseDocument(Document):
+    role_name: str = Field(..., max_length=50)
+    role_code: str = Field(..., max_length=50)
+    description: Optional[str] = None  # 可能是大文本
+    gridfs_description_id: Optional[str] = None  # GridFS引用
+    create_time: Union[datetime, str] = Field(default_factory=datetime.now)
+    update_time: Union[datetime, str] = Field(default_factory=datetime.now)
+    is_deleted: bool = Field(default=False)
+
+    class Config:
+        arbitrary_types_allowed = True
+        orm_mode = True
+        use_state_management = True
+
+
+class RoleWbsite(RoleBaseDocument):
+    id: int = Field(..., primary_field=True, alias='id')
+
+    class Settings:
+        name = "roles"
+        database = "wbsite"
+
+
+class RoleTest(RoleBaseDocument):
+    id: int = Field(..., primary_field=True, alias='id')
+
+    class Settings:
+        name = "roles"
+        database = "test_data"
 
 # 假设的Pydantic请求和响应模型
 class RoleCreateRequest(BaseModel):
@@ -201,6 +237,7 @@ class RoleResponse(BaseModel):
     create_time: datetime
     update_time: datetime = Field(default_factory=datetime.now)
     is_deleted: bool
+    gridfs_description_id: Optional[str]
 
 
 async def get_next_sequence(model: Type[Document]) -> int:
@@ -222,22 +259,42 @@ async def get_next_sequence(model: Type[Document]) -> int:
 
 class RoleDatabaseOperations(BaseDatabaseOperations[RoleCreateRequest, RoleResponse]):
     async def create(self, create_data: RoleCreateRequest) -> RoleResponse:
-        new_id = await get_next_sequence(RoleWbsite)  # Generate the next ID
+        # 获取Motor集合引用
+        motor_collection = RoleWbsite.get_motor_collection()
+
+        # 从Motor集合引用获取数据库实例
+        db = motor_collection.database
+
+        # 创建GridFS实例
+        fs = AsyncIOMotorGridFSBucket(db)
+
+        # 检查description大小，决定是否使用GridFS
+        if create_data.description and len(create_data.description.encode('utf-8')) > 16 * 1024 * 1024:
+            # 存储到 GridFS
+            gridfs_file_id = await fs.upload_from_stream("role_description", create_data.description.encode('utf-8'))
+            create_data.description = None  # 清除原始 description 字段
+            gridfs_description_id = str(gridfs_file_id)
+        else:
+            gridfs_description_id = None
+
+        # 生成新的ID
+        new_id = await get_next_sequence(RoleWbsite)
+
+        # 创建RoleWbsite实例，包括GridFS引用（如果有）
         role = RoleWbsite(
-                          id=new_id,
-                          role_name=create_data.role_name,
-                          role_code=create_data.role_code,
-                          description=create_data.description)
+            id=new_id,
+            role_name=create_data.role_name,
+            role_code=create_data.role_code,
+            description=create_data.description,
+            gridfs_description_id=gridfs_description_id
+        )
+
         role_dict = role.dict()
         await role.get_motor_collection().insert_one(role_dict)
         return RoleResponse(**role.dict())
 
     async def get_all(self) -> List[RoleResponse]:
         roles = await RoleWbsite.find_all().to_list()
-
-        for role in roles:
-            log_manager.debug(f"Role: {role}")
-
         return [RoleResponse(**role.dict()) for role in
                 roles]
 
@@ -251,9 +308,23 @@ class RoleDatabaseOperations(BaseDatabaseOperations[RoleCreateRequest, RoleRespo
         return [RoleResponse(**role.dict()) for role in
                 roles]
 
-    async def get_by_id(self, record_id: Union[int, str, PydanticObjectId]) -> RoleResponse:
-        role = await RoleWbsite.get(record_id)
-        return RoleResponse(**role.dict())
+    async def get_by_id(self, record_id: int) -> Union[RoleResponse, None]:
+        role = await RoleWbsite.find_one(RoleWbsite.id == record_id)
+
+        if role and role.gridfs_description_id:
+            motor_collection = RoleWbsite.get_motor_collection()
+            db = motor_collection.database
+            fs = AsyncIOMotorGridFSBucket(db)
+
+            # Use AsyncIOMotorGridFSBucket to retrieve data from GridFS
+            gridfs_file_stream = await fs.open_download_stream(ObjectId(role.gridfs_description_id))
+            contents = await gridfs_file_stream.read()
+            role.description = contents.decode('utf-8')
+
+        if role:
+            return RoleResponse(**role.dict())
+        else:
+            return None  # Or raise an exception
 
     async def update(self, record_id: Union[PydanticObjectId, int, str],
                      update_data: RoleCreateRequest) -> RoleResponse:
@@ -269,16 +340,6 @@ class RoleDatabaseOperations(BaseDatabaseOperations[RoleCreateRequest, RoleRespo
         await role.delete()
 
 
-#
-#
-import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-from beanie import init_beanie
-
-from models import RoleWbsite, RoleTest
-from services.role_batabase import RoleTestDatabaseOperations, RoleWbsiteDatabaseOperations
-
-
 async def init_db():
     # 连接到数据库
     client_test_data = AsyncIOMotorClient("mongodb://localhost:27017/test_data")
@@ -289,43 +350,50 @@ async def init_db():
     await init_beanie(database=client_wbsite.get_database("wbsite"), document_models=[RoleWbsite])
 
 
-# async def run_tests():
-#     await init_db()  # 确保先初始化数据库
-#
-#     role_wbsite_ops = RoleDatabaseOperations()
-#
-# #     print(role_wbsite_ops)
-# # #
-# # #     # 获取所有角色
-# #     roles = await role_wbsite_ops.get_all()
-# #
-# #     roles = await role_wbsite_ops.create()
-# #     print("Roles:", roles)
-# #
-# #
-# if __name__ == "__main__":
-#     asyncio.run(run_tests())
-
 async def run_tests():
     await init_db()  # 确保先初始化数据库
 
-    # 创建 RoleDatabaseOperations 实例
     role_wbsite_ops = RoleDatabaseOperations()
 
-    # 创建新角色的数据
-    new_role_data = RoleCreateRequest(
-        role_name="Example Role",
-        role_code="example_code",
-        description="This is an example role description."
-    )
+    print(await role_wbsite_ops.get_all())
+    #
+    #     # 获取所有角色
+    roles_id = await role_wbsite_ops.get_by_id(2)
+    print("*" * 100)
+    print(roles_id)
 
-    # 创建新角色
-    new_role = await role_wbsite_ops.create(new_role_data)
-    print("New Role Created:", new_role)
+    # large_description = "a" * (16 * 1024 * 1024 + 1)  # 多一个字节确保超过16MB
+    # new_role = RoleCreateRequest(role_name="Admin", role_code="admin", description=large_description)
+    # created_role = await role_wbsite_ops.create(new_role)
+    # print(f"Created Role ID: {created_role.id}")
+    roles_id = await role_wbsite_ops.get_by_id(42)
+    print(roles_id)
 
 
+#
 if __name__ == "__main__":
     asyncio.run(run_tests())
+
+# async def run_tests():
+#     await init_db()  # 确保先初始化数据库
+#
+#     # 创建 RoleDatabaseOperations 实例
+#     role_wbsite_ops = RoleDatabaseOperations()
+#
+#     # 创建新角色的数据
+#     new_role_data = RoleCreateRequest(
+#         role_name="Example Role",
+#         role_code="example_code",
+#         description="This is an example role description."
+#     )
+#
+#     # 创建新角色
+#     new_role = await role_wbsite_ops.create(new_role_data)
+#     print("New Role Created:", new_role)
+#
+#
+# if __name__ == "__main__":
+#     asyncio.run(run_tests())
 
 # import asyncio
 # from motor.motor_asyncio import AsyncIOMotorClient

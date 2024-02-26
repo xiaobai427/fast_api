@@ -49,8 +49,8 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
     model: Type[T]  # 指定模型类型
 
     async def create(self, create_data: RoleCreateRequest) -> RoleResponse:
-        new_id = await get_next_sequence(RoleWbsite)  # Generate the next ID
-        role = RoleWbsite(
+        new_id = await get_next_sequence(self.model)  # Generate the next ID
+        role = self.model(
                           id=new_id,
                           role_name=create_data.role_name,
                           role_code=create_data.role_code,
@@ -77,7 +77,7 @@ class RoleDatabaseOperationsBase(Generic[T], BaseDatabaseOperations[RoleCreateRe
         return [RoleResponse(**role.dict()) for role in roles]
 
     async def get_by_id(self, record_id: Union[int, str]) -> RoleResponse:
-        role = await self.model.get(record_id)
+        role = await self.model.find_one(self.model.id == record_id)
         return RoleResponse(**role.dict())
 
     async def update(self, record_id: Union[int, str],
